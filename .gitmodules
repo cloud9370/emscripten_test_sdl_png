@@ -1,0 +1,6 @@
+[submodule "zlib-1.2.8"]
+	path = zlib-1.2.8
+	url = https://github.com/cloud9370/emscripten_zlib-1.2.8.git
+[submodule "libpng-1.6.16"]
+	path = libpng-1.6.16
+	url = https://github.com/cloud9370/emscripten_libpng-1.6.16.git
