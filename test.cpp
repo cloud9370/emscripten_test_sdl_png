@@ -61,6 +61,10 @@ bool loadPNG(const char *pngFile)
 SDL_Surface *pngSurface;
 void asyncOnLoad(const char *file)
 {
+    EM_ASM
+    (
+        console.error('asyncOnLoad Test print out on entering function');
+    );
     printf("asyncOnLoad [%s] called\n", file);
     if(pngSurface)
     {
@@ -68,17 +72,94 @@ void asyncOnLoad(const char *file)
         pngSurface = 0;
     }
     pngSurface = SDL_CreateSurfaceFromPNG(file);
+    EM_ASM
+    (
+        FS.syncfs(function (err) {
+            console.error('asyncOnLoad SYNC');
+        });
+    );
 }
 void asyncOnErr(const char *file)
 {
     printf("Load [%s] ERROR.\n", file);
 }
 
+enum
+{
+    STATE_WAIT_INIT_FS,
+    STATE_GET_FILE,
+    STATE_RUN,
+    STATE_END,
+};
+int iMainStat = STATE_WAIT_INIT_FS;
+extern "C" void initFsDone()
+{
+    printf("initFsDone CALLED\n");
+    iMainStat = STATE_GET_FILE;
+    const char *pngFile = "/data/pretty_pal.png";
+    FILE *fp = fopen(pngFile, "rb");
+    if(fp)
+    {
+        asyncOnLoad(pngFile);
+        fclose(fp);
+        printf("Load [%s] from persistence data\n", pngFile);
+    }
+    else
+    {
+        printf("Load [%s] asynchronize\n", pngFile);
+        emscripten_async_wget("pretty_pal.png", pngFile, asyncOnLoad, asyncOnErr);
+    }
+}
+
+void mountFS()
+{
+    printf("mount fs c-call\n");
+    EM_ASM
+    (
+        console.error('Call mount FS');
+        FS.mkdir('/data');
+        FS.mount(IDBFS, {}, '/data');
+        FS.syncfs(true, function (err) {
+            console.error('mount path /data');
+            ccall('initFsDone');
+        });
+    );
+    printf("mount fs c-call end\n");
+}
+
+void unmountFS()
+{
+    EM_ASM
+    (
+        FS.syncfs(function (err) {
+            console.error('unmountFS');
+        });
+        FS.umount('/data');
+    );
+}
+
 SDL_Surface *screen;
 TTF_Font *font;
 int count = 0;
+bool mountFlag = false;
+bool checkFile = false;
 void callback_test()
 {
+    //printf("test open file png\n");
+    if(!checkFile)
+    {
+        FILE *testFp = fopen("/data/pretty_pal.png", "rb");
+        if(testFp)
+        {
+            printf("File exists /data/pretty_pal.png\n");
+            fclose(testFp);
+            checkFile = true;
+        }
+        else
+        {
+            printf("File not exists /data/pretty_pal.png\n");
+        }
+    }
     count ++ ;
     char szBuf[128];
     memset(szBuf, 0, sizeof(szBuf));
@@ -122,7 +203,6 @@ void callback_test()
 void testEmscripten()
 {
     pngSurface = 0;
-	printf("Test\n");
 
 	SDL_version compiled;
 	SDL_VERSION(&compiled);
@@ -153,7 +233,6 @@ void testEmscripten()
     }
 
     #ifdef EMSCRIPTEN
-    emscripten_async_wget("pretty_pal.png", "pretty_pal.png", asyncOnLoad, asyncOnErr);
     /*
     emscripten_async_wget2(
         "test.bmp", // url
@@ -169,6 +248,7 @@ void testEmscripten()
     //emscripten_async_wget("cgbgm_b0.ogg", "cgbgm_b0.ogg", asyncAudioOnLoad, asyncAudioOnErr);
 
 	//emscripten_set_main_loop(callback_test, 60, 1);
+    mountFS();
     emscripten_set_main_loop(callback_test, 0, 1);
     #endif /*EMSCRIPTEN*/
 	printf("Finish main\n");
@@ -180,6 +260,11 @@ void testEmscripten()
 
 int main(int argc, char *argv[])
 {
+    printf("argc [%d]\n", argc);
+    for(int i=0;i<argc;i++)
+    {
+        printf("argv[%d] => [%s]\n", i, argv[i]);
+    }
 	Data d;
 	d.test();
 	printf("Test\n");
@@ -188,6 +273,7 @@ int main(int argc, char *argv[])
 	emscripten_set_main_loop(callback_test, 1, 0);
 	printf("Finish main\n");
     */
+    //unmountFS();
 	
 	#ifdef EMSCRIPTEN
 	printf("emscripten defined\n");
