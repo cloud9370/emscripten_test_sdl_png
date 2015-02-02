@@ -4,3 +4,6 @@
 [submodule "libpng-1.6.16"]
 	path = libpng-1.6.16
 	url = https://github.com/cloud9370/emscripten_libpng-1.6.16.git
+[submodule "jsoncpp-0.7.1"]
+	path = jsoncpp-0.7.1
+	url = https://github.com/cloud9370/emscripten_jsoncpp-0.7.1.git
