@@ -1,10 +1,12 @@
 #include <cstdio>
 #include <cstring>
+#include <string>
 #include <emscripten.h>
 #include <SDL.h>
 #include <SDL_image.h>
 #include <SDL_mixer.h>
 #include <SDL_ttf.h>
+#include <json/json.h>
 #include "data.h"
 
 extern "C"
@@ -258,6 +260,16 @@ void testEmscripten()
     SDL_Quit();
 }
 
+void testJSON()
+{
+    Json::Reader reader;
+    Json::Value value;
+    std::string str = "{\"user\":\"test\",\"age\":30}";
+    reader.parse(str, value);
+    std::string temp = value[std::string("user")].asString();
+    printf("<JSON> user = [%s]\n", temp.c_str());
+}
+
 int main(int argc, char *argv[])
 {
     printf("argc [%d]\n", argc);
@@ -265,18 +277,19 @@ int main(int argc, char *argv[])
     {
         printf("argv[%d] => [%s]\n", i, argv[i]);
     }
-	Data d;
-	d.test();
-	printf("Test\n");
+    Data d;
+    d.test();
+    printf("Test\n");
+    testJSON();
     testEmscripten();
     /*
-	emscripten_set_main_loop(callback_test, 1, 0);
-	printf("Finish main\n");
+    emscripten_set_main_loop(callback_test, 1, 0);
+    printf("Finish main\n");
     */
     //unmountFS();
-	
-	#ifdef EMSCRIPTEN
-	printf("emscripten defined\n");
-	#endif /*EMSCRIPTEN*/
-	return 0;
+
+    #ifdef EMSCRIPTEN
+    printf("emscripten defined\n");
+    #endif /*EMSCRIPTEN*/
+    return 0;
 }

@@ -1,11 +1,11 @@
 CC=emcc
-CFLAGS=-Ilibpng-1.6.16 -Izlib-1.2.8
+CFLAGS=-Ilibpng-1.6.16 -Izlib-1.2.8 -Ijsoncpp-0.7.1/include
 
 CXX=em++
 CXXFLAGS=$(CFLAGS)
 
 EMFLAGS=-s EXPORTED_FUNCTIONS="['_main', '_initFsDone']"
-LDFLAGS=-Llibpng-1.6.16/.libs -lpng16 -Lzlib-1.2.8 -lz
+LDFLAGS=-Llibpng-1.6.16/.libs -lpng16 -Lzlib-1.2.8 -lz -Ljsoncpp-0.7.1 -ljsoncpp
 
 OBJS=test.o data.o
 
