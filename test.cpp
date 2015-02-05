@@ -7,11 +7,65 @@
 #include <SDL_mixer.h>
 #include <SDL_ttf.h>
 #include <json/json.h>
+#include <AL/al.h>
+#include <AL/alc.h>
 #include "data.h"
 
 extern "C"
 {
 #include <png.h>
+}
+
+#define OPENAL_MAX_LENGTH 10
+ALCdevice *device;
+ALCcontext *context;
+ALuint buffer[OPENAL_MAX_LENGTH];
+ALuint source[OPENAL_MAX_LENGTH];
+void initOpenAL()
+{
+    printf("OpenAL Init\n");
+    device = alcOpenDevice(0);
+    context = 0;
+    if(device)
+    {
+        printf("Open Device success\n");
+        context = alcCreateContext(device, 0);
+        if(context)
+        {
+            printf("Make context\n");
+            alcMakeContextCurrent(context);
+        }
+    }
+    alGenBuffers(OPENAL_MAX_LENGTH, buffer);
+    alGenSources(OPENAL_MAX_LENGTH, source);
+
+    ALfloat listenerPos[]={0.0,0.0,4.0};
+    ALfloat listenerVel[]={0.0,0.0,0.0};
+    ALfloat listenerOri[]={0.0,0.0,1.0, 0.0,1.0,0.0};
+
+    ALfloat source0Pos[]={ -2.0, 0.0, 0.0};
+    ALfloat source0Vel[]={ 0.0, 0.0, 0.0};
+
+    alListenerfv(AL_POSITION,listenerPos);
+    alListenerfv(AL_VELOCITY,listenerVel);
+    alListenerfv(AL_ORIENTATION,listenerOri);
+
+    alSourcef(source[0], AL_PITCH, 1.0f);
+    alSourcef(source[0], AL_GAIN, 1.0f);
+    alSourcefv(source[0], AL_POSITION, source0Pos);
+    alSourcefv(source[0], AL_VELOCITY, source0Vel);
+    alSourcei(source[0], AL_BUFFER,buffer[0]);
+    alSourcei(source[0], AL_LOOPING, AL_TRUE);
+}
+void endOpenAL()
+{
+    alDeleteSources(OPENAL_MAX_LENGTH, source);
+    alDeleteBuffers(OPENAL_MAX_LENGTH, buffer);
+    alcMakeContextCurrent(0);
+    if(context) alcDestroyContext(context);
+    context = 0;
+    if(device) alcCloseDevice(device);
+    device = 0;
 }
 
 bool loadPNG(const char *pngFile)
@@ -68,12 +122,6 @@ void asyncOnLoad(const char *file)
         console.error('asyncOnLoad Test print out on entering function');
     );
     printf("asyncOnLoad [%s] called\n", file);
-    if(pngSurface)
-    {
-        SDL_FreeSurface(pngSurface);
-        pngSurface = 0;
-    }
-    pngSurface = SDL_CreateSurfaceFromPNG(file);
     EM_ASM
     (
         FS.syncfs(function (err) {
@@ -85,6 +133,22 @@ void asyncOnErr(const char *file)
 {
     printf("Load [%s] ERROR.\n", file);
 }
+
+//============================================================================
+void AsyncPrepareOnLoad(const char *file)
+{
+    printf("AsyncPrepareOnLoad called [%s]\n", file);
+}
+void AsyncPrepareOnError(const char *file)
+{
+    printf("AsyncPrepareOnError called [%s]\n", file);
+}
+void testAsyncPrepare()
+{
+    printf("Call async prepare\n");
+    emscripten_async_prepare("/data/pretty_pal.png", AsyncPrepareOnLoad, AsyncPrepareOnError);
+}
+//============================================================================
 
 enum
 {
@@ -105,11 +169,13 @@ extern "C" void initFsDone()
         asyncOnLoad(pngFile);
         fclose(fp);
         printf("Load [%s] from persistence data\n", pngFile);
+        testAsyncPrepare();
     }
     else
     {
         printf("Load [%s] asynchronize\n", pngFile);
         emscripten_async_wget("pretty_pal.png", pngFile, asyncOnLoad, asyncOnErr);
+        emscripten_async_wget("cgbgm_b0.ogg", "/data/cgbgm_b0.ogg", asyncOnLoad, asyncOnErr);
     }
 }
 
@@ -145,6 +211,7 @@ TTF_Font *font;
 int count = 0;
 bool mountFlag = false;
 bool checkFile = false;
+bool checkSound = false;
 void callback_test()
 {
     //printf("test open file png\n");
@@ -156,10 +223,38 @@ void callback_test()
             printf("File exists /data/pretty_pal.png\n");
             fclose(testFp);
             checkFile = true;
+            if(pngSurface)
+            {
+                SDL_FreeSurface(pngSurface);
+                pngSurface = 0;
+            }
+            pngSurface = SDL_CreateSurfaceFromPNG("/data/pretty_pal.png");
         }
         else
         {
-            printf("File not exists /data/pretty_pal.png\n");
+            //printf("File not exists /data/pretty_pal.png\n");
+        }
+    }
+    if(!checkSound)
+    {
+        FILE *testFp = fopen("/data/cgbgm_b0.ogg", "rb");
+        if(testFp)
+        {
+            printf("File exists /data/cgbgm_b0.ogg\n");
+            fclose(testFp);
+            checkSound = true;
+            Mix_Chunk *pChunk = Mix_LoadWAV("/data/cgbgm_b0.ogg");
+            if(pChunk)
+            {
+                alBufferData(buffer[0], AL_FORMAT_STEREO16, pChunk->abuf, pChunk->alen, 22050);
+                printf("Has Chunk\n");
+                Mix_FreeChunk(pChunk);
+                //alSourcePlay(source[0]);
+            }
+            else
+            {
+                printf("Mix Error [%s]\n", Mix_GetError());
+            }
         }
     }
     count ++ ;
@@ -204,6 +299,7 @@ void callback_test()
 
 void testEmscripten()
 {
+    initOpenAL();
     pngSurface = 0;
 
 	SDL_version compiled;
@@ -224,7 +320,7 @@ void testEmscripten()
 	}
 
     // Test Audio
-    int result = Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 1024);
+    int result = Mix_OpenAudio(22050, MIX_DEFAULT_FORMAT, 2, 1024);
     if(result == -1)
     {
         printf("Audio open failed.\n");
@@ -250,6 +346,7 @@ void testEmscripten()
     //emscripten_async_wget("cgbgm_b0.ogg", "cgbgm_b0.ogg", asyncAudioOnLoad, asyncAudioOnErr);
 
 	//emscripten_set_main_loop(callback_test, 60, 1);
+    testAsyncPrepare();
     mountFS();
     emscripten_set_main_loop(callback_test, 0, 1);
     #endif /*EMSCRIPTEN*/
@@ -258,6 +355,7 @@ void testEmscripten()
     Mix_Quit();
     TTF_Init();
     SDL_Quit();
+    endOpenAL();
 }
 
 void testJSON()
