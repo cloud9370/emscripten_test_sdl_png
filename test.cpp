@@ -10,6 +10,7 @@
 #include <AL/al.h>
 #include <AL/alc.h>
 #include "data.h"
+#include "testogg.h"
 
 extern "C"
 {
@@ -246,10 +247,12 @@ void callback_test()
             Mix_Chunk *pChunk = Mix_LoadWAV("/data/cgbgm_b0.ogg");
             if(pChunk)
             {
-                alBufferData(buffer[0], AL_FORMAT_STEREO16, pChunk->abuf, pChunk->alen, 22050);
+                DecodeData decData;
+                decodeOgg("/data/cgbgm_b0.ogg", &decData);
+                alBufferData(buffer[0], AL_FORMAT_STEREO16, decData.buf, decData.len, 22050);
                 printf("Has Chunk\n");
                 Mix_FreeChunk(pChunk);
-                //alSourcePlay(source[0]);
+                alSourcePlay(source[0]);
             }
             else
             {
