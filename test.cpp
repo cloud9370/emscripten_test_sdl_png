@@ -297,6 +297,33 @@ void callback_test()
     }
 }
 
+void asyncOnLoad2(void *arg, const char *file)
+{
+    printf("asyncOnLoad2 called\n");
+}
+void asyncOnErr2(void *arg, int status)
+{
+    printf("asyncOnErr2\n");
+}
+void asyncOnProgress2(void *arg, int status)
+{
+    printf("asyncOnProgress2\n");
+}
+void testAsyncGet()
+{
+    /*
+    emscripten_async_wget2(
+        "pretty_pal.png", // url
+        "pretty_pal.png", // file
+        "POST", // requesttype
+        "v=bmp", // param
+        0, // arg
+        asyncOnLoad2, // onload
+        asyncOnErr2, // onerror
+        asyncOnProgress2); // onprogress
+    */
+}
+
 void testEmscripten()
 {
     initOpenAL();
@@ -331,17 +358,6 @@ void testEmscripten()
     }
 
     #ifdef EMSCRIPTEN
-    /*
-    emscripten_async_wget2(
-        "test.bmp", // url
-        "test.bmp", // file
-        "POST", // requesttype
-        "v=bmp", // param
-        0, // arg
-        asyncOnLoad2, // onload
-        asyncOnErr2, // onerror
-        asyncOnProgress2); // onprogress
-    */
 
     //emscripten_async_wget("cgbgm_b0.ogg", "cgbgm_b0.ogg", asyncAudioOnLoad, asyncAudioOnErr);
 
