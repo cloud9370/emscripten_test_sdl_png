@@ -1,13 +1,24 @@
+# For Linux environment
+LOGGFLAGS=-Ilibogg-1.3.2/include
+LOGGLIBS=-Llibogg-1.3.2/src/.libs -logg
+LVORBISFLAGS=-Ilibvorbis-1.3.4/include
+LVORBISLIBS=-Llibvorbis-1.3.4/lib/.libs -lvorbisfile -lvorbis
+# For Windows environment
+WOGGFLAGS=-Ilibogg-1.3.2/include
+WOGGLIBS=-Llibogg-1.3.2/src -logg
+WVORBISFLAGS=-Ilibvorbis-1.3.4/include
+WVORBISLIBS=-Llibvorbis-1.3.4/lib -lvorbisfile -lvorbis
+
 CC=emcc
-CFLAGS=-Ilibpng-1.6.16 -Izlib-1.2.8 -Ijsoncpp-0.7.1/include -Ilibogg-1.3.2/include -Ilibvorbis-1.3.4/include
+CFLAGS=-Ilibpng-1.6.16 -Izlib-1.2.8 -Ijsoncpp-0.7.1/include $(WOGGFLAGS) $(WVORBISFLAGS)
 
 CXX=em++
 CXXFLAGS=$(CFLAGS)
 
 EMFLAGS=-s EXPORTED_FUNCTIONS="['_main', '_initFsDone']"
 LDFLAGS=-Llibpng-1.6.16/.libs -lpng16 -Lzlib-1.2.8 -lz -Ljsoncpp-0.7.1 -ljsoncpp \
-	-Llibvorbis-1.3.4/lib/.libs -lvorbisfile -lvorbis \
-	-Llibogg-1.3.2/src/.libs -logg
+	$(WVORBISLIBS) \
+	$(WOGGLIBS)
 
 OBJS=test.o data.o testogg.o
 
