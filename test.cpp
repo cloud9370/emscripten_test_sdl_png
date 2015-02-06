@@ -247,9 +247,28 @@ void callback_test()
             Mix_Chunk *pChunk = Mix_LoadWAV("/data/cgbgm_b0.ogg");
             if(pChunk)
             {
-                DecodeData decData;
+                if(alIsSource(source[0])) printf("source[0] is source\n");
+                else printf("source[0] is NOT source\n");
+                ALint state;
+                alGetSourcei(source[0], AL_SOURCE_STATE, &state);
+                if(state==AL_STOPPED)
+                {
+                    printf("Sound stopped\n");
+                }
+                else if(state==AL_PLAYING)
+                {
+                    alSourceStop(source[0]);
+                    printf("Sound playing\n");
+                }
+                else
+                {
+                    printf("Sound unknown state\n");
+                }
+                static DecodeData decData;
                 decodeOgg("/data/cgbgm_b0.ogg", &decData);
                 alBufferData(buffer[0], AL_FORMAT_STEREO16, decData.buf, decData.len, 22050);
+                //alBufferData(buffer[0], AL_FORMAT_STEREO16, pChunk->abuf, pChunk->alen, 22050);
+                alSourcei(source[0], AL_BUFFER,buffer[0]);
                 printf("Has Chunk\n");
                 Mix_FreeChunk(pChunk);
                 alSourcePlay(source[0]);
