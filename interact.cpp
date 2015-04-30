@@ -127,13 +127,13 @@ void testChewingTest()
         chewing_set_candPerPage(ct, 9);
 
         chewing_handle_Default(ct, 'x');
-        //chewing_handle_Default(ct, 'm');
-        //chewing_handle_Default(ct, '4');
-        //chewing_handle_Default(ct, 't');
-        //chewing_handle_Default(ct, '8');
-        //chewing_handle_Default(ct, '6');
+        chewing_handle_Default(ct, 'm');
+        chewing_handle_Default(ct, '4');
+        chewing_handle_Default(ct, 't');
+        chewing_handle_Default(ct, '8');
+        chewing_handle_Default(ct, '6');
+        chewing_handle_Enter(ct);
 
-        /*
         char *buf = chewing_commit_String(ct);
         if(buf)
         {
@@ -144,7 +144,6 @@ void testChewingTest()
         {
             printf("chewing_commit_String ERROR\n");
         }
-        */
 
         chewing_delete(ct);
         chewing_Terminate();

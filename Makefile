@@ -18,7 +18,7 @@ CFLAGS=-O0 -g3 -Ilibpng-1.6.16 -Izlib-1.2.8 -Ijsoncpp-0.7.1/include $(WOGGFLAGS)
 CXX=em++
 CXXFLAGS=$(CFLAGS)
 
-EMFLAGS=-s EXPORTED_FUNCTIONS="['_main', '_initFsDone']"
+EMFLAGS=-s EXPORTED_FUNCTIONS="['_main', '_initFsDone']" -s TOTAL_MEMORY=268435456
 LDFLAGS=-Llibpng-1.6.16/.libs -lpng16 -Lzlib-1.2.8 -lz -Ljsoncpp-0.7.1 -ljsoncpp \
 	$(WVORBISLIBS) \
 	$(WOGGLIBS) \
@@ -36,8 +36,8 @@ all: $(PROGRAM)
 html: $(PROGHTM)
 
 
-$(PROGRAM) $(PROGHTM): $(OBJS)
-	$(CXX) $(EMFLAGS) $(CXXFLAGS) -o $@ $(OBJS) $(LDFLAGS) --post-js post.js --emrun
+$(PROGRAM) $(PROGHTM): $(OBJS) pre.js post.js
+	$(CXX) $(EMFLAGS) $(CXXFLAGS) -o $@ $(OBJS) $(LDFLAGS) --pre-js pre.js --post-js post.js --emrun
 
 
 clean:
