@@ -11,6 +11,7 @@
 #include <AL/alc.h>
 #include "data.h"
 #include "testogg.h"
+#include "interact.h"
 
 extern "C"
 {
@@ -305,6 +306,11 @@ void callback_test()
     SDL_BlitSurface(text, 0, screen, &rect);
     SDL_FreeSurface(text);
 
+    //========================================================================
+    // Testing chewing
+    testChewing();
+    //========================================================================
+
     SDL_Flip(screen);
 
     SDL_Event event;
@@ -416,6 +422,7 @@ int main(int argc, char *argv[])
     Data d;
     d.test();
     printf("Test\n");
+    testChewingInit();
     testJSON();
     testEmscripten();
     /*
