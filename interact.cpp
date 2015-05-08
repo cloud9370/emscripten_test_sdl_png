@@ -11,6 +11,8 @@ EMSCRIPTEN_KEEPALIVE extern "C" void interCall()
     printf("test\n");
 }
 
+#define CHEWING_NEW_TEST 1
+
 const char *szUrl = "http://localhost:6931/data/";
 
 const char *szFile[] =
@@ -35,11 +37,13 @@ enum
     CW_END
 };
 
+ChewingContext *ct = 0;
 int iChewingState = 0;
 int iChewingCount = 0;
 int iChewingDownState = 0;
 std::string strChewingDownUrl;
 std::string strChewingFilePath;
+int selKey[] = {'1', '2', '3', '4', '5', '6', '7', '8', '9', 0};
 
 void testChewingInit()
 {
@@ -47,6 +51,10 @@ void testChewingInit()
     iChewingState = CW_INIT;
     iChewingCount = 0;
     iChewingDownState = 0;
+}
+
+void createChewingContext()
+{
 }
 
 static void cwOnLoad(const char *szFile)
@@ -88,16 +96,26 @@ void testChewingDown()
         iChewingDownState = 0;
         break;
     case 3: // Download process done;
+        #ifdef CHEWING_NEW_TEST
+        ct = chewing_new();
+        if(ct)
+        {
+            printf("Init libchewing\n");
+            chewing_set_selKey(ct, selKey, 9);
+            chewing_set_maxChiSymbolLen(ct, 10);
+            chewing_set_candPerPage(ct, 9);
+        }
+        #endif /*CHEWING_NEW_TEST*/
         iChewingState = CW_TEST;
         break;
     }
 }
 
+#ifndef CHEWING_NEW_TEST
 void testChewingTest()
 {
     printf("=================================================\n");
     printf("Test libchewing\n");
-    ChewingContext *ct;
     chewing_Init("/", ".");
     ct = chewing_new();
 
@@ -118,7 +136,6 @@ void testChewingTest()
             printf("Chinese mode changed\n");
         }
         printf("Set Select Key\n");
-        int selKey[] = {'1', '2', '3', '4', '5', '6', '7', '8', '9', 0};
         chewing_set_selKey(ct, selKey, 9);
 
         printf("Set Chinese symbol max length\n");
@@ -147,6 +164,7 @@ void testChewingTest()
 
         chewing_delete(ct);
         chewing_Terminate();
+        ct = 0;
     }
     else
     {
@@ -161,6 +179,11 @@ void testChewingTest()
 
     iChewingState = CW_END;
 }
+#else /*CHEWING_NEW_TEST*/
+void testChewingTest()
+{
+}
+#endif /*CHEWING_NEW_TEST*/
 
 /**
  * Reference:
@@ -179,5 +202,220 @@ void testChewing()
     case CW_END:
     default:
         break;
+    }
+}
+
+void testChewingKeyDown(SDL_Event *event)
+{
+    // Web版的SDL似乎有問題，此處手動對應回SDLKey值
+    switch(event->key.keysym.sym)
+    {
+    case 0xba:  event->key.keysym.sym = SDLK_SEMICOLON; break;
+    case 0xbb:  event->key.keysym.sym = SDLK_EQUALS;    break;
+    case 0xbd:  event->key.keysym.sym = SDLK_MINUS;     break;
+    default: break;
+    }
+
+    SDL_keysym *pKeySym = &(event->key.keysym);
+
+
+    if(ct)
+    {
+        SDLKey keySym = pKeySym->sym;
+        switch(keySym)
+        {
+        case SDLK_CAPSLOCK:     chewing_handle_Capslock(ct);  break;
+        case SDLK_BACKSPACE:    chewing_handle_Backspace(ct); break;
+        case SDLK_UP:           chewing_handle_Up(ct);        break;
+        case SDLK_DOWN:         chewing_handle_Down(ct);      break;
+        case SDLK_ESCAPE:       chewing_handle_Esc(ct);       break;
+        case SDLK_DELETE:       chewing_handle_Del(ct);       break;
+        case SDLK_TAB:          chewing_handle_Tab(ct);       break;
+        case SDLK_PAGEUP:       chewing_handle_PageUp(ct);    break;
+        case SDLK_PAGEDOWN:     chewing_handle_PageDown(ct);  break;
+        case SDLK_HOME:         chewing_handle_Home(ct);      break;
+        case SDLK_END:          chewing_handle_End(ct);       break;
+        //case SDLK_NUMLOCK:      chewing_handle_Numlock(ct);   break;
+
+        case SDLK_SPACE:
+            if(pKeySym->mod & KMOD_SHIFT)   chewing_handle_ShiftSpace(ct);
+            else                            chewing_handle_Space(ct);
+            break;
+        case SDLK_LEFT:
+            if(pKeySym->mod & KMOD_SHIFT)   chewing_handle_ShiftLeft(ct);
+            else                            chewing_handle_Left(ct);
+            break;
+
+        case SDLK_RIGHT:
+            if(pKeySym->mod & KMOD_SHIFT)   chewing_handle_ShiftRight(ct);
+            else                            chewing_handle_Right(ct);
+            break;
+
+        default:
+            chewing_handle_Default(ct, (int)keySym);
+            break;
+
+        case SDLK_RETURN:
+            chewing_handle_Enter(ct);
+            {
+                char *szBuf = chewing_commit_String(ct);
+                if(szBuf)
+                {
+                    printf("IME Enter [%s]\n", szBuf);
+                    chewing_free(szBuf);
+                }
+            }
+            break;
+        }
+
+        Uint32 u32 = pKeySym->unicode;
+        int iZuinCount = 0;
+        std::string strZuin, strAux, strBuf;
+        //================================================
+        //printf("chewing_zuin_Check [%d]\n", chewing_zuin_Check(ct));
+        //if(!chewing_zuin_Check(ct))
+        {
+            char *szZuin= chewing_zuin_String(ct, &iZuinCount);
+            if(szZuin)
+            {
+                strZuin = szZuin;
+                chewing_free(szZuin);
+            }
+        }
+        //================================================
+        if(chewing_aux_Check(ct))
+        {
+            char *szAux = chewing_aux_String(ct);
+            if(szAux)
+            {
+                strAux = szAux;
+                chewing_free(szAux);
+            }
+        }
+        //================================================
+        if(chewing_buffer_Check(ct))
+        {
+            char *szBuf = chewing_buffer_String(ct);
+            if(szBuf)
+            {
+                strBuf = szBuf;
+                chewing_free(szBuf);
+            }
+        }
+        //================================================
+        printf("[%3d][%3x][%3x]Chewing cursor[%d] zuinCheck[%d] zuinCount[%d] zuin[%s] aux[%s] buffer [%s]\n",
+            keySym, keySym, u32, chewing_cursor_Current(ct),
+            chewing_zuin_Check(ct),
+            iZuinCount, strZuin.c_str(), strAux.c_str(), strBuf.c_str());
+
+        chewing_cand_Enumerate(ct);
+        int totalCand = chewing_cand_TotalChoice(ct);
+        if(totalCand > 0)
+        {
+            printf("Candidate [%d]\n", totalCand);
+            while(chewing_cand_hasNext(ct))
+            {
+                char *szCand = chewing_cand_String(ct);
+                printf("[%s]", szCand);
+                chewing_free(szCand);
+            }
+            printf("\n");
+        }
+        printf("cand CD[%d] TP[%d] CPP[%d] CP[%d]\n",
+            chewing_cand_CheckDone(ct),
+            chewing_cand_TotalPage(ct),
+            chewing_cand_ChoicePerPage(ct),
+            chewing_cand_CurrentPage(ct));
+    }
+}
+
+void testChewingDraw(SDL_Surface *screen, TTF_Font *font)
+{
+    if(ct)
+    {
+        SDL_Color colorWhite = {255, 255, 255};
+        SDL_Color colorRed = {255, 0, 0};
+        SDL_Surface *text = 0;
+        std::string strBuf;
+        SDL_Rect dst = {0, 0, 0, 0};
+        char *szOut = 0;
+
+        strBuf = "注音:";
+        if(chewing_buffer_Check(ct))
+        {
+            szOut = chewing_buffer_String(ct);
+            if(szOut)
+            {
+                strBuf += szOut;
+                chewing_free(szOut);
+                szOut = 0;
+            }
+        }
+        dst.x = 240;
+        dst.y = 240;
+        text = TTF_RenderText_Solid(font, strBuf.c_str(), colorWhite);
+        SDL_BlitSurface(text, 0, screen, &dst);
+        SDL_FreeSurface(text);
+
+        int iZuinCount;
+        strBuf = "符號:";
+        szOut = chewing_zuin_String(ct, &iZuinCount);
+        if(szOut)
+        {
+            strBuf += szOut;
+            chewing_free(szOut);
+            szOut = 0;
+        }
+        dst.y += 16;
+        text = TTF_RenderText_Solid(font, strBuf.c_str(), colorWhite);
+        SDL_BlitSurface(text, 0, screen, &dst);
+        SDL_FreeSurface(text);
+
+        strBuf = "輸出:";
+        if(chewing_commit_Check(ct))
+        {
+            szOut = chewing_commit_String(ct);
+            if(szOut)
+            {
+                strBuf += szOut;
+                chewing_free(szOut);
+                szOut = 0;
+            }
+        }
+        dst.y += 16;
+        text = TTF_RenderText_Solid(font, strBuf.c_str(), colorWhite);
+        SDL_BlitSurface(text, 0, screen, &dst);
+        SDL_FreeSurface(text);
+
+        if(chewing_cand_TotalChoice(ct) > 0)
+        {
+            int iTotalPage      = chewing_cand_TotalPage(ct);
+            int iCurrentPage    = chewing_cand_CurrentPage(ct);
+            int iChoicePerPage  = chewing_cand_ChoicePerPage(ct);
+            int iLoop = 0;
+            strBuf = "候選:";
+            chewing_cand_Enumerate(ct);
+            while(chewing_cand_hasNext(ct))
+            {
+                char *szCand = chewing_cand_String(ct);
+                //printf("[%s]", szCand);
+                if(szCand)
+                {
+                    strBuf += (char)selKey[iLoop];
+                    strBuf += szCand;
+                    strBuf += " ";
+                    chewing_free(szCand);
+                }
+                iLoop ++ ;
+                if(iLoop >= iChoicePerPage) break;
+            }
+            char temp[256];
+            sprintf(temp, "(%d/%d)", iCurrentPage+1, iTotalPage);
+            strBuf += temp;
+            dst.y += 16;
+            text = TTF_RenderText_Solid(font, strBuf.c_str(), colorWhite);
+            SDL_BlitSurface(text, 0, screen, &dst);
+            SDL_FreeSurface(text);
+        }
     }
 }

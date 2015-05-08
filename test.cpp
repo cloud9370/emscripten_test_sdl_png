@@ -208,6 +208,22 @@ void unmountFS()
     );
 }
 
+void eventProc()
+{
+    SDL_Event event;
+    while(SDL_PollEvent(&event))
+    {
+		switch(event.type)
+		{
+		case SDL_KEYDOWN:
+			//printf("Key down\n");
+            testChewingKeyDown(&event);
+			break;
+		}
+    }
+}
+
+//#define DEF_SHOW_PNG
 SDL_Surface *screen;
 TTF_Font *font;
 int count = 0;
@@ -293,7 +309,9 @@ void callback_test()
     rect.h = pngSurface->h;
     if(pngSurface)
     {
+        #ifdef DEF_SHOW_PNG
         SDL_BlitSurface(pngSurface, 0, screen, &rect);
+        #endif /*DEF_SHOW_PNG*/
     }
 
     // Counter
@@ -309,20 +327,12 @@ void callback_test()
     //========================================================================
     // Testing chewing
     testChewing();
+    testChewingDraw(screen, font);
     //========================================================================
 
     SDL_Flip(screen);
 
-    SDL_Event event;
-    while(SDL_PollEvent(&event))
-    {
-		switch(event.type)
-		{
-		case SDL_KEYDOWN:
-			printf("Key down\n");
-			break;
-		}
-    }
+    eventProc();
 }
 
 void asyncOnLoad2(void *arg, const char *file)
@@ -397,7 +407,7 @@ void testEmscripten()
 	printf("Finish main\n");
 
     Mix_Quit();
-    TTF_Init();
+    TTF_Quit();
     SDL_Quit();
     endOpenAL();
 }
