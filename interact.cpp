@@ -221,6 +221,7 @@ void testChewingKeyDown(SDL_Event *event)
 
     if(ct)
     {
+        char cKey = 0; // use for keypad.
         SDLKey keySym = pKeySym->sym;
         switch(keySym)
         {
@@ -237,8 +238,37 @@ void testChewingKeyDown(SDL_Event *event)
         case SDLK_END:          chewing_handle_End(ct);       break;
         //case SDLK_NUMLOCK:      chewing_handle_Numlock(ct);   break;
 
+        case SDLK_KP0:          cKey = '0';     chewing_handle_Numlock(ct, cKey);   break;
+        case SDLK_KP1:          cKey = '1';     chewing_handle_Numlock(ct, cKey);   break;
+        case SDLK_KP2:          cKey = '2';     chewing_handle_Numlock(ct, cKey);   break;
+        case SDLK_KP3:          cKey = '3';     chewing_handle_Numlock(ct, cKey);   break;
+        case SDLK_KP4:          cKey = '4';     chewing_handle_Numlock(ct, cKey);   break;
+        case SDLK_KP5:          cKey = '5';     chewing_handle_Numlock(ct, cKey);   break;
+        case SDLK_KP6:          cKey = '6';     chewing_handle_Numlock(ct, cKey);   break;
+        case SDLK_KP7:          cKey = '7';     chewing_handle_Numlock(ct, cKey);   break;
+        case SDLK_KP8:          cKey = '8';     chewing_handle_Numlock(ct, cKey);   break;
+        case SDLK_KP9:          cKey = '9';     chewing_handle_Numlock(ct, cKey);   break;
+        case SDLK_KP_PERIOD:    cKey = '.';     chewing_handle_Numlock(ct, cKey);   break;
+        case SDLK_KP_DIVIDE:    cKey = '/';     chewing_handle_Numlock(ct, cKey);   break;
+        case SDLK_KP_MULTIPLY:  cKey = '*';     chewing_handle_Numlock(ct, cKey);   break;
+        case SDLK_KP_MINUS:     cKey = '-';     chewing_handle_Numlock(ct, cKey);   break;
+        case SDLK_KP_PLUS:      cKey = '+';     chewing_handle_Numlock(ct, cKey);   break;
+        case SDLK_KP_ENTER:     cKey = '\r';    chewing_handle_Numlock(ct, cKey);   break;
+        case SDLK_KP_EQUALS:    cKey = '=';     chewing_handle_Numlock(ct, cKey);   break;
+
         case SDLK_SPACE:
-            if(pKeySym->mod & KMOD_SHIFT)   chewing_handle_ShiftSpace(ct);
+            if(pKeySym->mod & KMOD_SHIFT)
+            {
+                //printf("Shift Space pressed.\n");
+                chewing_handle_ShiftSpace(ct);
+                if(chewing_get_ShapeMode(ct))   chewing_set_ShapeMode(ct, 0);
+                else                            chewing_set_ShapeMode(ct, 1);
+            }
+            else if(pKeySym->mod & KMOD_CTRL)
+            {
+                if(chewing_get_ChiEngMode(ct) == CHINESE_MODE)  chewing_set_ChiEngMode(ct, SYMBOL_MODE);
+                else                                            chewing_set_ChiEngMode(ct, CHINESE_MODE);
+            }
             else                            chewing_handle_Space(ct);
             break;
         case SDLK_LEFT:
@@ -258,12 +288,14 @@ void testChewingKeyDown(SDL_Event *event)
         case SDLK_RETURN:
             chewing_handle_Enter(ct);
             {
+                /*
                 char *szBuf = chewing_commit_String(ct);
                 if(szBuf)
                 {
                     printf("IME Enter [%s]\n", szBuf);
                     chewing_free(szBuf);
                 }
+                */
             }
             break;
         }
@@ -340,6 +372,16 @@ void testChewingDraw(SDL_Surface *screen, TTF_Font *font)
         SDL_Rect dst = {0, 0, 0, 0};
         char *szOut = 0;
 
+        if(chewing_get_ChiEngMode(ct) == CHINESE_MODE)  strBuf = "注音";
+        else                                            strBuf = "英數";
+        if(chewing_get_ShapeMode(ct))   strBuf += "/全型";
+        else                            strBuf += "/半型";
+        dst.x = 240;
+        dst.y = 240;
+        text = TTF_RenderText_Solid(font, strBuf.c_str(), colorWhite);
+        SDL_BlitSurface(text, 0, screen, &dst);
+        SDL_FreeSurface(text);
+
         strBuf = "注音:";
         if(chewing_buffer_Check(ct))
         {
@@ -351,8 +393,7 @@ void testChewingDraw(SDL_Surface *screen, TTF_Font *font)
                 szOut = 0;
             }
         }
-        dst.x = 240;
-        dst.y = 240;
+        dst.y += 16;
         text = TTF_RenderText_Solid(font, strBuf.c_str(), colorWhite);
         SDL_BlitSurface(text, 0, screen, &dst);
         SDL_FreeSurface(text);
@@ -387,6 +428,7 @@ void testChewingDraw(SDL_Surface *screen, TTF_Font *font)
         SDL_BlitSurface(text, 0, screen, &dst);
         SDL_FreeSurface(text);
 
+        chewing_cand_Enumerate(ct);
         if(chewing_cand_TotalChoice(ct) > 0)
         {
             int iTotalPage      = chewing_cand_TotalPage(ct);
@@ -394,7 +436,6 @@ void testChewingDraw(SDL_Surface *screen, TTF_Font *font)
             int iChoicePerPage  = chewing_cand_ChoicePerPage(ct);
             int iLoop = 0;
             strBuf = "候選:";
-            chewing_cand_Enumerate(ct);
             while(chewing_cand_hasNext(ct))
             {
                 char *szCand = chewing_cand_String(ct);
