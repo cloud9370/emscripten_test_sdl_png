@@ -1,5 +1,7 @@
 #include "data.h"
+#include <cstring>
 #include <cstdio>
+#include <iconv.h>
 extern "C"
 {
 #include <png.h>
@@ -18,6 +20,35 @@ Data::~Data()
 void Data::test()
 {
 	printf("Data::test called\n");
+    iconv_t id = iconv_open("BIG5", "UTF-8");
+    if(id != (iconv_t)-1)
+    {
+        printf("iconv_open success\n");
+        const char *szUtf8 = "盤";
+        size_t lUtf8 = strlen(szUtf8);
+        char szBig5Buf[256];
+        char *pBig5Buf = szBig5Buf;
+        size_t lBig5Buf = sizeof(szBig5Buf);
+        if(iconv(id, (char **)&szUtf8, &lUtf8, &pBig5Buf, &lBig5Buf) != (size_t)-1)
+        {
+            int len = (int)strlen(szBig5Buf);
+            printf("Big5:[%s]\n", szBig5Buf);
+            for(int i=0;i<len;i++)
+            {
+                printf("[%2X]", szBig5Buf[i]);
+            }
+            printf("\n");
+        }
+        else
+        {
+            printf("Big5 iconv ERROR\n");
+        }
+        iconv_close(id);
+    }
+    else
+    {
+        printf("iconv_open failed\n");
+    }
 }
 
 SDL_Surface *SDL_CreateSurfaceFromPNG(const char *filename)

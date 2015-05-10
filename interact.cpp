@@ -1,4 +1,5 @@
 #include "interact.h"
+#include "data.h"
 #include <emscripten.h>
 #include <sys/stat.h>
 #include <cstdio>
@@ -107,6 +108,11 @@ void testChewingDown()
         }
         #endif /*CHEWING_NEW_TEST*/
         iChewingState = CW_TEST;
+        //====================================================================
+        // Just test
+        Data d;
+        d.test();
+        //====================================================================
         break;
     }
 }
