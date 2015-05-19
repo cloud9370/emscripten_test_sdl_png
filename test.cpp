@@ -3,6 +3,7 @@
 #include <string>
 #include <emscripten.h>
 #include <SDL.h>
+#include <SDL/SDL_opengl.h>
 #include <SDL_image.h>
 #include <SDL_mixer.h>
 #include <SDL_ttf.h>
@@ -13,6 +14,7 @@
 #include "testogg.h"
 #include "interact.h"
 
+#define BUFFER_OFFSET(offset)  ((GLvoid*) (NULL + offset))
 extern "C"
 {
 #include <png.h>
@@ -422,8 +424,149 @@ void testJSON()
     printf("<JSON> user = [%s]\n", temp.c_str());
 }
 
+#define TEST_FOR_GL
+
+GLuint VAOs[1];
+GLuint Buffers[1];
+GLuint vertexShaderObject, fragmentShaderObject;
+GLuint programObject;
+void drawGL()
+{
+    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+    //glBegin(GL_TRIANGLES);
+    //glEnd();
+
+    glBindVertexArray(VAOs[0]);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    glFlush();
+    SDL_GL_SwapBuffers();
+}
+
+void callback_test_gl()
+{
+    drawGL();
+    eventProc();
+}
+
+#define VERTEX_SHADER " \
+    attribute vec3 vp;\n \
+    void main(void)\n \
+    {\n \
+        gl_Position = vec4(vp, 1.0);\n \
+    }\n"
+
+#define FRAGMENT_SHADER "void main(void) \
+    { \
+        gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0); \
+    }"
+
+void testGLInit()
+{
+    printf("testGLInit\n");
+
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+
+	SDL_Init(SDL_INIT_VIDEO);
+    TTF_Init();
+    font = TTF_OpenFont("FreeSans.ttf", 12);
+	screen = SDL_SetVideoMode(640, 480, 32, SDL_OPENGL);
+	if(screen)
+	{
+	}
+	else
+	{
+		SDL_Quit();
+	}
+
+    //GLfloat ratio = (GLfloat)640/(GLfloat)480;
+    //glShadeModel(GL_SMOOTH);
+
+    //glClearColor(0, 0, 0, 0);
+
+    //glViewport(0, 0, 640, 480);
+    //glMatrixMode(GL_PROJECTION);
+    //glLoadIdentity();
+
+    //gluPerspective(45.0f, ratio, 1.0f, 100.0f);
+
+    printf("GL version: [%s]\n", glGetString(GL_VERSION));
+    glGenVertexArrays(1, VAOs);
+    glBindVertexArray(VAOs[0]);
+
+    GLfloat vertices[6][2] = 
+    {
+        { -0.90, -0.90 },
+        {  0.85, -0.90 },
+        { -0.90,  0.85 },
+        {  0.90, -0.85 },
+        {  0.90,  0.90 },
+        { -0.85,  0.90 }
+    };
+    glGenBuffers(1, Buffers);
+    glBindBuffer(GL_ARRAY_BUFFER, Buffers[0]);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    vertexShaderObject = glCreateShader(GL_VERTEX_SHADER);
+    fragmentShaderObject = glCreateShader(GL_FRAGMENT_SHADER);
+    const GLchar *VertexShaderSource = (const GLchar *)VERTEX_SHADER;
+    const GLchar *FragmentShaderSource = (const GLchar *)FRAGMENT_SHADER;
+    GLint vlength = (GLint)strlen(VERTEX_SHADER);
+    GLint flength = (GLint)strlen(FRAGMENT_SHADER);
+    glShaderSource(vertexShaderObject, 1, &VertexShaderSource, &vlength);
+    glShaderSource(fragmentShaderObject, 1, &FragmentShaderSource, &flength);
+    glCompileShader(vertexShaderObject);
+    glCompileShader(fragmentShaderObject);
+	GLint Result = GL_FALSE;
+	int InfoLogLength;
+    glGetShaderiv(vertexShaderObject, GL_COMPILE_STATUS, &Result);
+    glGetShaderiv(vertexShaderObject, GL_INFO_LOG_LENGTH, &InfoLogLength);
+    if(Result == GL_FALSE)
+    {
+        if ( InfoLogLength > 0 ){
+            GLchar *szTemp = new GLchar[InfoLogLength + 1];
+            //std::vector<char> VertexShaderErrorMessage(InfoLogLength+1);
+            glGetShaderInfoLog(vertexShaderObject, InfoLogLength, NULL, szTemp);
+            printf("[%d][%s]\n", Result, szTemp);
+            delete [] szTemp;
+        }
+    }
+    glGetShaderiv(fragmentShaderObject, GL_COMPILE_STATUS, &Result);
+    glGetShaderiv(fragmentShaderObject, GL_INFO_LOG_LENGTH, &InfoLogLength);
+    if(Result == GL_FALSE)
+    {
+        if ( InfoLogLength > 0 ){
+            GLchar *szTemp = new GLchar[InfoLogLength + 1];
+            //std::vector<char> VertexShaderErrorMessage(InfoLogLength+1);
+            glGetShaderInfoLog(fragmentShaderObject, InfoLogLength, NULL, szTemp);
+            printf("[%d][%s]\n", Result, szTemp);
+            delete [] szTemp;
+        }
+    }
+    programObject = glCreateProgram();
+    glAttachShader(programObject, vertexShaderObject);
+    glAttachShader(programObject, fragmentShaderObject);
+    glLinkProgram(programObject);
+    glUseProgram(programObject);
+
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
+
+    #ifdef EMSCRIPTEN
+    emscripten_set_main_loop(callback_test_gl, 0, 1);
+    #endif /*EMSCRIPTEN*/
+
+    TTF_CloseFont(font);
+    TTF_Quit();
+    SDL_Quit();
+}
+
+
 int main(int argc, char *argv[])
 {
+    #ifdef TEST_FOR_GL
+    testGLInit();
+    #else /*TEST_FOR_GL*/
     printf("argc [%d]\n", argc);
     for(int i=0;i<argc;i++)
     {
@@ -444,5 +587,6 @@ int main(int argc, char *argv[])
     #ifdef EMSCRIPTEN
     printf("emscripten defined\n");
     #endif /*EMSCRIPTEN*/
+    #endif /*TEST_FOR_GL*/
     return 0;
 }
