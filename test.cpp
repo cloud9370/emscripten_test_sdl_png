@@ -209,7 +209,7 @@ void unmountFS()
         FS.umount('/data');
     );
 }
-
+GLubyte gl_atest;
 void eventProc()
 {
     SDL_Event event;
@@ -218,8 +218,26 @@ void eventProc()
 		switch(event.type)
 		{
 		case SDL_KEYDOWN:
-			//printf("Key down\n");
-            testChewingKeyDown(&event);
+			printf("Key down: %d , Alpha : %d \n",event.key.keysym.scancode,gl_atest);
+			int code = event.key.keysym.scancode;
+			if ( code == 79)
+			{
+				gl_atest++;
+			}
+			else
+			{
+				gl_atest--;
+			}
+			
+			if ( gl_atest < 0)
+			{
+				gl_atest = 0;
+			}
+			if ( gl_atest > 255)
+			{
+				gl_atest = 255;
+			}
+            //testChewingKeyDown(&event);
 			break;
 		}
     }
@@ -426,40 +444,199 @@ void testJSON()
 
 #define TEST_FOR_GL
 
-GLuint VAOs[1];
-GLuint Buffers[1];
+GLuint VAOs[2];
+GLuint Buffers[2];
+GLuint texture[1];
 GLuint vertexShaderObject, fragmentShaderObject;
 GLuint programObject;
+
+extern GLubyte gl_atest;
+
+GLuint CreateSimpleTexture2D(GLubyte);
+void DrawRect(float x , float y , float size_x , float size_y);
+
 void drawGL()
 {
-    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+	
+    glClear(GL_COLOR_BUFFER_BIT);
+	//glActiveTexture(GL_TEXTURE0);
+	//GLuint textureId =  CreateSimpleTexture2D();
+	
+	//glUniform1i(textureId , 0);
+	
+	
     //glBegin(GL_TRIANGLES);
     //glEnd();
 
-    glBindVertexArray(VAOs[0]);
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-
-    glFlush();
+    //glBindVertexArray(VAOs[0]);
+	//glBindVertexArray(VAOs[1]);
+	
+	DrawRect(0,0, 1, 1);
+	
+	DrawRect(-0.5,-0.5, 1, 1);
+    
     SDL_GL_SwapBuffers();
 }
 
 void callback_test_gl()
 {
     drawGL();
+	gl_atest++;
     eventProc();
 }
-
 #define VERTEX_SHADER " \
-    attribute vec3 vp;\n \
+    attribute vec4 vp;\n \
+	attribute vec2 vt;\n \
+	varying vec2 v_TexCoordinate;          \n \
     void main(void)\n \
     {\n \
-        gl_Position = vec4(vp, 1.0);\n \
+        gl_Position = vp;\n \
+		v_TexCoordinate = vt; \n \
     }\n"
 
-#define FRAGMENT_SHADER "void main(void) \
-    { \
-        gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0); \
+#define FRAGMENT_SHADER " \
+	precision mediump float; \n \
+	uniform sampler2D u_Texture; \n \
+	varying vec2 v_TexCoordinate; \n \
+	void main(void)  \
+    { \n \
+        gl_FragColor =texture2D(u_Texture, v_TexCoordinate) ; \n \
     }"
+
+	
+#define VERTEX_INDEX 0
+#define COORDINATE_INDEX 1
+/*
+#define VERTEX_SHADER " \
+ uniform mat4 u_MVPMatrix;   \n \
+ uniform mat4 u_MVMatrix;     \n attribute vec4 a_Position;   \n \
+ attribute vec4 a_Color;      \n attribute vec3 a_Normal;     \n \
+ attribute vec2 a_TexCoordinate; \n \
+ varying vec3 v_Position;        \n \
+ varying vec4 v_Color;          \n \
+ varying vec3 v_Normal;         \n \
+ varying vec2 v_TexCoordinate;  \n \n\
+ void main() \n \
+{ \n \
+    v_Position = vec3(a_Position); \n  v_Color = a_Color; \n \
+    v_TexCoordinate = a_TexCoordinate; \n \
+    v_Normal = vec3(u_MVMatrix * vec4(a_Normal, 0.0)); \n gl_Position = u_MVPMatrix * a_Position; \n \
+}  \n "
+
+#define FRAGMENT_SHADER " \
+precision mediump float; \n \
+uniform vec3 u_LightPos; \n \
+uniform sampler2D u_Texture; \n \
+varying vec3 v_Position;      \n \
+varying vec4 v_Color;         \n \
+varying vec3 v_Normal;        \n \
+varying vec2 v_TexCoordinate; \n \
+void main() \n \
+{ \n     float distance = length(u_LightPos - v_Position); \n \
+    vec3 lightVector = normalize(u_LightPos - v_Position); \n \
+    float diffuse = max(dot(v_Normal, lightVector), 0.0); \n \
+    diffuse = diffuse * (1.0 / (1.0 + (0.10 * distance))); \n \
+    diffuse = diffuse + 0.3;\n \
+    gl_FragColor = (v_Color * diffuse * texture2D(u_Texture, v_TexCoordinate)); \n \
+}"
+
+*/
+
+GLuint CreateSimpleTexture2D(GLubyte alpha)
+{
+	GLuint textureId;
+	int width = 4 ;
+	int height = 4 ; 
+	//Image
+	GLubyte pixels[ (4 * 4)  * 4] = 
+	{
+		255,  0 ,   0, alpha,
+		255, 255,   0, alpha,
+		255, 255,   255, alpha,
+		255, 255,   255, alpha,
+		
+		 0,   0, 255, alpha,
+		 0, 255,   0, alpha,
+		 0,  70 , 70, alpha,
+		 255, 255,   255, alpha,
+		 
+		70,  70,   0, alpha,
+		70,  80, 100, alpha,
+		255, 255,   255, alpha,
+		255, 0 , 255, alpha,
+		
+		70,  70,   70, alpha,
+		70,  55, 100, alpha,
+		255, 255,   22, alpha,
+		255, 55 , 255, alpha
+		
+	};
+	GLenum error = glGetError();
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glGenTextures(1 , &textureId);
+	
+	glBindTexture( GL_TEXTURE_2D , textureId );
+	error = glGetError();
+	glTexImage2D(GL_TEXTURE_2D , 0 , GL_RGBA ,  width , height , 0 , GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+	error = glGetError();
+	if (error != GL_NO_ERROR)
+	{
+		printf("Error Code:%d",error);
+	}
+	glTexParameteri( GL_TEXTURE_2D , GL_TEXTURE_MIN_FILTER, GL_NEAREST );
+	glTexParameteri( GL_TEXTURE_2D , GL_TEXTURE_MAG_FILTER, GL_NEAREST );
+	
+	return textureId;
+}
+
+struct Vertex {
+	GLfloat position[3];
+	GLfloat coordinate[2];
+};
+
+
+void DrawRect(float x , float y , float size_x , float size_y)
+{
+	Vertex vertices[6] = {
+		{ {x- (size_x / 2) ,  y - (size_y / 2) , 0.0} , {0,0} },
+		{ {x+ (size_x / 2) , y - (size_y / 2) , 0.0} , {1,0} },
+		{ {x+ (size_x / 2) , y + (size_y / 2) , 0.0} , {1,1} },
+		{ {x+ (size_x / 2) , y + (size_y / 2) , 0.0} , {1,1} },
+		{ {x- (size_x / 2) , y + (size_y / 2) , 0.0} , {0,1} },
+		{ {x- (size_x / 2) , y - (size_y / 2) , 0.0} , {0,0} }
+	};
+	
+	// Create and bind VAO
+    glGenVertexArrays(1, VAOs);
+    glBindVertexArray(VAOs[0]);
+		
+	// Create and Bind Buffers
+	glGenBuffers(1, Buffers);
+    glBindBuffer(GL_ARRAY_BUFFER, Buffers[0]);
+    glBufferData(GL_ARRAY_BUFFER,  6 * sizeof(Vertex), vertices, GL_STATIC_DRAW);
+	
+	// Create Texture
+	GLuint textureId =  CreateSimpleTexture2D(gl_atest);
+	
+	glUniform1i(textureId , 0);
+	
+	// Set Vertex Attribute Value
+	glEnableVertexAttribArray(VERTEX_INDEX);
+	glVertexAttribPointer(VERTEX_INDEX, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *) offsetof(Vertex,position));
+	glEnableVertexAttribArray(COORDINATE_INDEX);
+	glVertexAttribPointer(COORDINATE_INDEX, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void *) offsetof(Vertex,coordinate));
+	
+	// Draw Rect 
+	glDrawArrays(GL_TRIANGLES, 0, 6);
+	glFlush();
+	
+	glDisableVertexAttribArray(VERTEX_INDEX);
+	glDisableVertexAttribArray(COORDINATE_INDEX);
+	//Clear Buffers
+	glDeleteBuffers( 1, &Buffers[0]);
+	glDeleteTextures( 1 , &textureId);
+ 
+}
 
 void testGLInit()
 {
@@ -468,8 +645,8 @@ void testGLInit()
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
 	SDL_Init(SDL_INIT_VIDEO);
-    TTF_Init();
-    font = TTF_OpenFont("FreeSans.ttf", 12);
+    //TTF_Init();
+    //font = TTF_OpenFont("FreeSans.ttf", 12);
 	screen = SDL_SetVideoMode(640, 480, 32, SDL_OPENGL);
 	if(screen)
 	{
@@ -489,25 +666,18 @@ void testGLInit()
     //glLoadIdentity();
 
     //gluPerspective(45.0f, ratio, 1.0f, 100.0f);
-
+	
+	gl_atest = 125;
+	
     printf("GL version: [%s]\n", glGetString(GL_VERSION));
-    glGenVertexArrays(1, VAOs);
-    glBindVertexArray(VAOs[0]);
-
-    GLfloat vertices[6][2] = 
-    {
-        { -0.90, -0.90 },
-        {  0.85, -0.90 },
-        { -0.90,  0.85 },
-        {  0.90, -0.85 },
-        {  0.90,  0.90 },
-        { -0.85,  0.90 }
-    };
-    glGenBuffers(1, Buffers);
-    glBindBuffer(GL_ARRAY_BUFFER, Buffers[0]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    vertexShaderObject = glCreateShader(GL_VERTEX_SHADER);
+	glClearColor(0,0,0,0);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+glEnable(GL_BLEND);
+	
+	glViewport(0,0,640,480);
+	
+	//Set up Shader
+	vertexShaderObject = glCreateShader(GL_VERTEX_SHADER);
     fragmentShaderObject = glCreateShader(GL_FRAGMENT_SHADER);
     const GLchar *VertexShaderSource = (const GLchar *)VERTEX_SHADER;
     const GLchar *FragmentShaderSource = (const GLchar *)FRAGMENT_SHADER;
@@ -517,6 +687,8 @@ void testGLInit()
     glShaderSource(fragmentShaderObject, 1, &FragmentShaderSource, &flength);
     glCompileShader(vertexShaderObject);
     glCompileShader(fragmentShaderObject);
+	
+	
 	GLint Result = GL_FALSE;
 	int InfoLogLength;
     glGetShaderiv(vertexShaderObject, GL_COMPILE_STATUS, &Result);
@@ -543,15 +715,51 @@ void testGLInit()
             delete [] szTemp;
         }
     }
+	/*
+	GLfloat vertices[5 * 4] = 
+    {
+		-0.1, -0.1, 0.0 , 1.0,
+        0.1, -0.1, 0.0 , 1.0,
+        0.1,  0.1, 0.0 , 1.0,
+        -0.1, 0.1, 0.0 , 1.0,
+		-0.1, -0.1, 0.0 , 1.0
+    };
+	
+	GLfloat color[5 * 4] = 
+	{
+		 1.0, 0.0, 0.0 , 1.0,
+		 0.0, 1.0, 0.0 , 1.0,
+		 0.0, 0.0, 1.0 , 1.0,
+		 1.0, 1.0, 0.0 , 1.0,
+		 1.0, 0.0, 1.0 , 1.0
+	};*/
+	
+	
+	
+	
+	// Create Program
     programObject = glCreateProgram();
     glAttachShader(programObject, vertexShaderObject);
     glAttachShader(programObject, fragmentShaderObject);
+	
+	// Set Attribute to Program
+	glBindAttribLocation(programObject, VERTEX_INDEX , "vp");
+	glBindAttribLocation(programObject, COORDINATE_INDEX , "vt");
+	
+	//Link & Use Program
     glLinkProgram(programObject);
     glUseProgram(programObject);
+	
+   
+	
 
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
-
+	//glVertexAttribPointer(VAOs[1], 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(1));
+    //glVertexAttribPointer (VERTEX_INDEX,3, GL_FLOAT, GL_FALSE, 0 , vertices);
+	//glVertexAttribPointer (COLOR_INDEX,4, GL_FLOAT, GL_FALSE, 0 , color);
+	
+	//glEnableVertexAttribArray(1);
+	//glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(0));
+	//CreateSimpleTexture2D();
     #ifdef EMSCRIPTEN
     emscripten_set_main_loop(callback_test_gl, 0, 1);
     #endif /*EMSCRIPTEN*/
