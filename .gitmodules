@@ -13,3 +13,9 @@
 [submodule "libvorbis-1.3.4"]
 	path = libvorbis-1.3.4
 	url = http://github.com/cloud9370/emscripten_libvorbis-1.3.4.git
+[submodule "libchewing-0.3.5"]
+	path = libchewing-0.3.5
+	url = https://github.com/cloud9370/emscripten_libchewing-0.3.5.git
+[submodule "libiconv-1.14"]
+	path = libiconv-1.14
+	url = https://github.com/cloud9370/emscripten_libiconv-1.14.git

@@ -9,10 +9,10 @@ WOGGLIBS=-Llibogg-1.3.2/src -logg
 WVORBISFLAGS=-Ilibvorbis-1.3.4/include
 WVORBISLIBS=-Llibvorbis-1.3.4/lib -lvorbisfile -lvorbis
 
-CHEWINGFLAGS=-I../libchewing-0.3.5/include
-CHEWINGLIBS=-L../libchewing-0.3.5/src/.libs -lchewing
-ICONVFLAGS=-I../libiconv-1.14/include
-ICONVLIBS=-L../libiconv-1.14/libcharset/lib/.libs -lcharset -L../libiconv-1.14/lib/.libs -liconv
+CHEWINGFLAGS=-Ilibchewing-0.3.5/include
+CHEWINGLIBS=-Llibchewing-0.3.5/src/.libs -lchewing
+ICONVFLAGS=-Ilibiconv-1.14/include
+ICONVLIBS=-Llibiconv-1.14/libcharset/lib/.libs -lcharset -Llibiconv-1.14/lib/.libs -liconv
 
 CC=emcc
 CFLAGS=-O0 -g3 -Ilibpng-1.6.16 -Izlib-1.2.8 -Ijsoncpp-0.7.1/include $(WOGGFLAGS) $(WVORBISFLAGS) $(CHEWINGFLAGS) \
